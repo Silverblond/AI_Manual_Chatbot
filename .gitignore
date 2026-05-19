@@ -1,0 +1,145 @@
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ============================================================
+# Editors / IDE
+# ============================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ============================================================
+# Env & Secrets (절대 커밋 금지)
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+secrets/
+credentials.json
+service-account*.json
+
+# ============================================================
+# Python (backend)
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# virtualenv (uv·venv·conda)
+.venv/
+venv/
+env/
+.python-version
+
+# 빌드/배포 산출물
+build/
+dist/
+*.egg
+*.egg-info/
+wheels/
+pip-wheel-metadata/
+
+# 테스트/캐시
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ============================================================
+# Node (frontend)
+# ============================================================
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# 빌드 산출물
+frontend/dist/
+frontend/build/
+.vite/
+.next/
+out/
+
+# 로그
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# 캐시
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.turbo/
+
+# ============================================================
+# Vector DB / 로컬 DB 산출물
+# ============================================================
+chroma_db/
+.chroma/
+*.sqlite
+*.sqlite3
+*.db
+
+# ============================================================
+# 프로젝트 데이터 (대용량·저작권)
+# ============================================================
+# 안전매뉴얼 PDF는 로컬 보관, 인덱싱은 스크립트로
+data/manuals/*.pdf
+data/manuals/*.hwp
+data/manuals/*.pptx
+data/manuals/*.docx
+data/embeddings/
+data/cache/
+
+# ============================================================
+# Claude Code 개인 설정 (개인별 다름, 커밋 제외)
+# ============================================================
+CLAUDE.md
+.claude/
+
+# ============================================================
+# 기타 임시·메타
+# ============================================================
+tmp/
+temp/
+.cache/
+*.bak
+*.tmp
+*.orig
+
+# 배포 플랫폼 로컬 설정
+.vercel
+.render

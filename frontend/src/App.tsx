@@ -1,8 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
+import { getHealth } from './api/client'
 import './App.css'
+
+function HealthIndicator() {
+  const [connected, setConnected] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    getHealth()
+      .then(() => setConnected(true))
+      .catch(() => setConnected(false))
+  }, [])
+
+  if (connected === null) return null
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+      <span style={{
+        width: '10px', height: '10px', borderRadius: '50%',
+        backgroundColor: connected ? '#22c55e' : '#ef4444',
+        display: 'inline-block',
+      }} />
+      <span>{connected ? 'Backend connected' : 'Backend disconnected'}</span>
+    </div>
+  )
+}
 
 function App() {
   const [count, setCount] = useState(0)
@@ -15,6 +39,7 @@ function App() {
           <img src={reactLogo} className="framework" alt="React logo" />
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
+        <HealthIndicator />
         <div>
           <h1>Get started</h1>
           <p>

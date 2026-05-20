@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { postChatStream } from "../api/client";
 import SourcesSection from "../components/SourceCard";
@@ -14,41 +14,49 @@ interface Message {
   isError?: boolean;
 }
 
+const SUGGESTED = [
+  "선로 작업 시 열차 접근 대피 기준은?",
+  "지하철 화재 발생 시 대응 절차는?",
+  "철도 안전관리체계란 무엇인가요?",
+  "신호수의 역할과 배치 기준이 궁금해요",
+];
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [coldStart, setColdStart] = useState(false);
+  const [dark, setDark] = useState(() =>
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function send() {
-    const text = input.trim();
-    if (!text || loading) return;
+  const send = useCallback(async (text?: string) => {
+    const content = (text ?? input).trim();
+    if (!content || loading) return;
 
-    const userMsg: Message = { role: "user", content: text };
     const history: ChatMessage[] = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { role: "user", content }]);
     setInput("");
     setLoading(true);
     setColdStart(false);
-
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-    const coldStartTimer = setTimeout(() => setColdStart(true), COLD_START_DELAY);
-    const abortController = new AbortController();
-    const timeoutTimer = setTimeout(() => abortController.abort(), REQUEST_TIMEOUT);
+    const coldTimer = setTimeout(() => setColdStart(true), COLD_START_DELAY);
+    const abort = new AbortController();
+    const timeoutTimer = setTimeout(() => abort.abort(), REQUEST_TIMEOUT);
 
     try {
       await postChatStream(
-        text,
+        content,
         history,
         (token) => {
           setColdStart(false);
@@ -68,7 +76,7 @@ export default function ChatPage() {
             return next;
           });
         },
-        abortController.signal,
+        abort.signal,
       );
     } catch (e) {
       const isTimeout = e instanceof Error && e.name === "AbortError";
@@ -84,112 +92,149 @@ export default function ChatPage() {
         return next;
       });
     } finally {
-      clearTimeout(coldStartTimer);
+      clearTimeout(coldTimer);
       clearTimeout(timeoutTimer);
       setColdStart(false);
       setLoading(false);
     }
-  }
+  }, [input, loading, messages]);
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
     }
   }
 
+  const isEmpty = messages.length === 0;
+
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>안전매뉴얼 AI 챗봇</h1>
-      </header>
+    <div className={dark ? "dark" : "light"} style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
+      <div className="chat-app">
+        {/* Header */}
+        <header className="chat-header">
+          <div className="chat-header-left">
+            <span className="chat-logo-icon">✦</span>
+            <span className="chat-logo-text">철도 안전 AI</span>
+          </div>
+          <button className="theme-btn" onClick={() => setDark((d) => !d)} aria-label="테마 전환">
+            {dark ? (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3a1 1 0 011 1v1a1 1 0 01-2 0V4a1 1 0 011-1zm0 15a1 1 0 011 1v1a1 1 0 01-2 0v-1a1 1 0 011-1zm9-6a1 1 0 010 2h-1a1 1 0 010-2h1zM4 12a1 1 0 010 2H3a1 1 0 010-2h1zm14.657-5.657a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM7.05 16.95a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707A1 1 0 017.05 16.95zm11.314 0a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707zM5.636 7.05a1 1 0 01-1.414 1.414l-.707-.707A1 1 0 014.93 6.343l.707.707zM12 7a5 5 0 100 10A5 5 0 0012 7z"/>
+              </svg>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+              </svg>
+            )}
+          </button>
+        </header>
 
-      <main style={styles.messageList}>
-        {messages.length === 0 && (
-          <p style={styles.placeholder}>안전 작업에 관해 궁금한 점을 물어보세요.</p>
-        )}
-        {messages.map((msg, i) => {
-          const isStreaming = loading && i === messages.length - 1 && msg.role === "assistant";
-          const isEmpty = isStreaming && msg.content === "";
-          return (
-            <div
-              key={i}
-              style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "72%" }}
-            >
-              <div
-                style={{
-                  ...styles.bubble,
-                  backgroundColor: msg.isError
-                    ? "#fef2f2"
-                    : msg.role === "user"
-                    ? "#2563eb"
-                    : "#f1f5f9",
-                  color: msg.isError
-                    ? "#dc2626"
-                    : msg.role === "user"
-                    ? "#fff"
-                    : isEmpty
-                    ? "#94a3b8"
-                    : "#1e293b",
-                }}
-              >
-                {isEmpty ? (
-                  "..."
-                ) : msg.role === "assistant" && !msg.isError ? (
-                  <ReactMarkdown components={markdownComponents}>
-                    {msg.content}
-                  </ReactMarkdown>
-                ) : (
-                  msg.content
-                )}
+        {/* Main */}
+        <main className="chat-main">
+          {isEmpty ? (
+            <div className="welcome">
+              <div className="welcome-glow" />
+              <div className="welcome-icon">✦</div>
+              <h1 className="welcome-title">무엇이 궁금하신가요?</h1>
+              <p className="welcome-sub">철도·지하철 안전 매뉴얼 기반 AI 챗봇</p>
+              <div className="suggestions">
+                {SUGGESTED.map((q) => (
+                  <button key={q} className="suggestion-chip" onClick={() => send(q)}>
+                    {q}
+                  </button>
+                ))}
               </div>
-              {msg.sources && <SourcesSection sources={msg.sources} />}
             </div>
-          );
-        })}
-        {coldStart && (
-          <p style={styles.coldStartNotice}>
-            ⏳ 서버가 잠들어 있어서 첫 응답이 느릴 수 있어요. 잠시만 기다려주세요…
-          </p>
-        )}
-        <div ref={bottomRef} />
-      </main>
+          ) : (
+            <div className="messages">
+              {messages.map((msg, i) => {
+                const isStreaming = loading && i === messages.length - 1 && msg.role === "assistant";
+                const isEmptyStream = isStreaming && msg.content === "";
+                return (
+                  <div key={i} className={`msg-row msg-${msg.role}`}>
+                    {msg.role === "assistant" && (
+                      <div className="assistant-avatar">✦</div>
+                    )}
+                    <div className="msg-body">
+                      <div className={[
+                        "bubble",
+                        `bubble-${msg.role}`,
+                        msg.isError ? "bubble-error" : "",
+                        isEmptyStream ? "bubble-empty" : "",
+                      ].join(" ").trim()}>
+                        {isEmptyStream ? (
+                          <span className="typing"><span /><span /><span /></span>
+                        ) : msg.role === "assistant" && !msg.isError ? (
+                          <ReactMarkdown components={markdownComponents}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+                      {msg.sources && <SourcesSection sources={msg.sources} />}
+                    </div>
+                  </div>
+                );
+              })}
+              {coldStart && (
+                <p className="cold-notice">
+                  ⏳ 서버가 잠들어 있어서 첫 응답이 느릴 수 있어요. 잠시만 기다려주세요…
+                </p>
+              )}
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </main>
 
-      <footer style={styles.inputRow}>
-        <input
-          style={styles.input}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="메시지를 입력하세요"
-          disabled={loading}
-        />
-        <button style={styles.button} onClick={send} disabled={loading}>
-          {loading ? "…" : "전송"}
-        </button>
-      </footer>
+        {/* Footer */}
+        <footer className={`chat-footer${isEmpty ? " chat-footer-centered" : ""}`}>
+          <div className="input-pill">
+            <input
+              className="pill-input"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder="철도 안전에 대해 질문하세요"
+              disabled={loading}
+            />
+            <button
+              className={`pill-send${input.trim() && !loading ? " pill-send-active" : ""}`}
+              onClick={() => send()}
+              disabled={loading || !input.trim()}
+              aria-label="전송"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 4L12 20M12 4L6 10M12 4L18 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <p className="disclaimer">AI 답변은 참고용입니다. 정확한 내용은 원문 문서를 확인하세요.</p>
+        </footer>
+      </div>
     </div>
   );
 }
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
-    <p style={{ margin: "0 0 8px 0", lineHeight: 1.6 }}>{children}</p>
+    <p style={{ margin: "0 0 8px 0", lineHeight: 1.75 }}>{children}</p>
   ),
   h1: ({ children }: { children?: React.ReactNode }) => (
-    <h1 style={{ margin: "8px 0 6px 0", fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>{children}</h1>
+    <h1 style={{ margin: "12px 0 6px", fontSize: "17px", fontWeight: 700 }}>{children}</h1>
   ),
   h2: ({ children }: { children?: React.ReactNode }) => (
-    <h2 style={{ margin: "8px 0 6px 0", fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>{children}</h2>
+    <h2 style={{ margin: "12px 0 6px", fontSize: "16px", fontWeight: 700 }}>{children}</h2>
   ),
   h3: ({ children }: { children?: React.ReactNode }) => (
-    <h3 style={{ margin: "6px 0 4px 0", fontSize: "15px", fontWeight: 700, color: "#1e293b" }}>{children}</h3>
+    <h3 style={{ margin: "8px 0 4px", fontSize: "15px", fontWeight: 600 }}>{children}</h3>
   ),
   ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul style={{ margin: "4px 0 8px 0", paddingLeft: "20px" }}>{children}</ul>
+    <ul style={{ margin: "4px 0 8px", paddingLeft: "18px" }}>{children}</ul>
   ),
   ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol style={{ margin: "4px 0 8px 0", paddingLeft: "20px" }}>{children}</ol>
+    <ol style={{ margin: "4px 0 8px", paddingLeft: "18px" }}>{children}</ol>
   ),
   li: ({ children }: { children?: React.ReactNode }) => (
     <li style={{ marginBottom: "4px" }}>{children}</li>
@@ -198,79 +243,8 @@ const markdownComponents = {
     <strong style={{ fontWeight: 700 }}>{children}</strong>
   ),
   code: ({ children }: { children?: React.ReactNode }) => (
-    <code style={{ backgroundColor: "#e2e8f0", borderRadius: "4px", padding: "2px 5px", fontSize: "13px" }}>
+    <code style={{ backgroundColor: "rgba(0,0,0,0.07)", borderRadius: "4px", padding: "2px 6px", fontSize: "13px" }}>
       {children}
     </code>
   ),
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100dvh",
-    maxWidth: "720px",
-    margin: "0 auto",
-    fontFamily: "system-ui, sans-serif",
-  },
-  header: {
-    padding: "16px 20px",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  title: {
-    margin: 0,
-    fontSize: "18px",
-    fontWeight: 600,
-  },
-  messageList: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  placeholder: {
-    color: "#94a3b8",
-    textAlign: "center",
-    marginTop: "40px",
-  },
-  coldStartNotice: {
-    color: "#64748b",
-    fontSize: "13px",
-    textAlign: "center",
-    margin: "4px 0",
-  },
-  bubble: {
-    padding: "10px 14px",
-    borderRadius: "12px",
-    lineHeight: 1.5,
-    fontSize: "14px",
-    wordBreak: "break-word",
-    textAlign: "left",
-  },
-  inputRow: {
-    display: "flex",
-    gap: "8px",
-    padding: "12px 16px",
-    borderTop: "1px solid #e2e8f0",
-  },
-  input: {
-    flex: 1,
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #cbd5e1",
-    fontSize: "14px",
-    outline: "none",
-  },
-  button: {
-    padding: "10px 20px",
-    borderRadius: "8px",
-    border: "none",
-    backgroundColor: "#2563eb",
-    color: "#fff",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontSize: "14px",
-  },
 };

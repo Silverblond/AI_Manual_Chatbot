@@ -15,7 +15,7 @@ def parse_pdf(pdf_path: str | Path) -> list[dict]:
 
     for i, page in enumerate(reader.pages, start=1):
         text = page.extract_text() or ""
-        text = text.strip()
+        text = text.replace("\x00", "").strip()  # PostgreSQL은 null 바이트 불허
         if not text:
             continue
         results.append(

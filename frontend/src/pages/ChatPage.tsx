@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { postChatStream } from "../api/client";
-import SourceCard from "../components/SourceCard";
+import SourcesSection from "../components/SourceCard";
 import type { ChatMessage, Source } from "../types/chat";
 
 const COLD_START_DELAY = 8000;  // 8초 이상이면 콜드스타트 안내
@@ -148,13 +148,7 @@ export default function ChatPage() {
                   msg.content
                 )}
               </div>
-              {msg.sources && msg.sources.length > 0 && (
-                <div style={styles.sourceList}>
-                  {msg.sources.map((src, j) => (
-                    <SourceCard key={j} source={src} />
-                  ))}
-                </div>
-              )}
+              {msg.sources && <SourcesSection sources={msg.sources} />}
             </div>
           );
         })}
@@ -186,6 +180,15 @@ export default function ChatPage() {
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
     <p style={{ margin: "0 0 8px 0", lineHeight: 1.6 }}>{children}</p>
+  ),
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <h1 style={{ margin: "8px 0 6px 0", fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>{children}</h1>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 style={{ margin: "8px 0 6px 0", fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 style={{ margin: "6px 0 4px 0", fontSize: "15px", fontWeight: 700, color: "#1e293b" }}>{children}</h3>
   ),
   ul: ({ children }: { children?: React.ReactNode }) => (
     <ul style={{ margin: "4px 0 8px 0", paddingLeft: "20px" }}>{children}</ul>
@@ -249,12 +252,7 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.5,
     fontSize: "14px",
     wordBreak: "break-word",
-  },
-  sourceList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    marginTop: "8px",
+    textAlign: "left",
   },
   inputRow: {
     display: "flex",

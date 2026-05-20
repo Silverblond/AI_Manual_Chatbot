@@ -1,13 +1,12 @@
+import type { ChatMessage, Source } from "../types/chat";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-export interface ChatMessage {
-  role: string;
-  content: string;
-}
+export type { ChatMessage, Source };
 
 export interface ChatResponse {
   answer: string;
-  sources: unknown[];
+  sources: Source[];
 }
 
 export async function getHealth(): Promise<{ status: string }> {

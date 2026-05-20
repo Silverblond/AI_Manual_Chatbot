@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { postChatStream } from "../api/client";
 import SourceCard from "../components/SourceCard";
 import type { ChatMessage, Source } from "../types/chat";
@@ -91,17 +92,28 @@ export default function ChatPage() {
         )}
         {messages.map((msg, i) => {
           const isStreaming = loading && i === messages.length - 1 && msg.role === "assistant";
-          const displayContent = isStreaming && msg.content === "" ? "..." : msg.content;
+          const isEmpty = isStreaming && msg.content === "";
           return (
-            <div key={i} style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "70%" }}>
+            <div
+              key={i}
+              style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "72%" }}
+            >
               <div
                 style={{
                   ...styles.bubble,
                   backgroundColor: msg.role === "user" ? "#2563eb" : "#f1f5f9",
-                  color: msg.role === "user" ? "#fff" : isStreaming && msg.content === "" ? "#94a3b8" : "#1e293b",
+                  color: msg.role === "user" ? "#fff" : isEmpty ? "#94a3b8" : "#1e293b",
                 }}
               >
-                {displayContent}
+                {isEmpty ? (
+                  "..."
+                ) : msg.role === "assistant" ? (
+                  <ReactMarkdown components={markdownComponents}>
+                    {msg.content}
+                  </ReactMarkdown>
+                ) : (
+                  msg.content
+                )}
               </div>
               {msg.sources && msg.sources.length > 0 && (
                 <div style={styles.sourceList}>
@@ -132,6 +144,30 @@ export default function ChatPage() {
     </div>
   );
 }
+
+// react-markdown 커스텀 컴포넌트 (인라인 스타일)
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p style={{ margin: "0 0 8px 0", lineHeight: 1.6 }}>{children}</p>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul style={{ margin: "4px 0 8px 0", paddingLeft: "20px" }}>{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol style={{ margin: "4px 0 8px 0", paddingLeft: "20px" }}>{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li style={{ marginBottom: "4px" }}>{children}</li>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong style={{ fontWeight: 700 }}>{children}</strong>
+  ),
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code style={{ backgroundColor: "#e2e8f0", borderRadius: "4px", padding: "2px 5px", fontSize: "13px" }}>
+      {children}
+    </code>
+  ),
+};
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
@@ -169,7 +205,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "12px",
     lineHeight: 1.5,
     fontSize: "14px",
-    whiteSpace: "pre-wrap",
     wordBreak: "break-word",
   },
   sourceList: {

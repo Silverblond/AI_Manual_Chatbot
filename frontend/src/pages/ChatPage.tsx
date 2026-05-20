@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { postChatStream } from "../api/client";
 import SourcesSection from "../components/SourceCard";
+import RailIcon from "../components/RailIcon";
 import type { ChatMessage, Source } from "../types/chat";
 
 const COLD_START_DELAY = 8000;
@@ -114,7 +115,7 @@ export default function ChatPage() {
         {/* Header */}
         <header className="chat-header">
           <div className="chat-header-left">
-            <span className="chat-logo-icon">✦</span>
+            <span className="chat-logo-icon"><RailIcon size={22} /></span>
             <span className="chat-logo-text">철도 안전 AI</span>
           </div>
           <button className="theme-btn" onClick={() => setDark((d) => !d)} aria-label="테마 전환">
@@ -135,7 +136,7 @@ export default function ChatPage() {
           {isEmpty ? (
             <div className="welcome">
               <div className="welcome-glow" />
-              <div className="welcome-icon">✦</div>
+              <div className="welcome-icon"><RailIcon size={44} /></div>
               <h1 className="welcome-title">무엇이 궁금하신가요?</h1>
               <p className="welcome-sub">철도·지하철 안전 매뉴얼 기반 AI 챗봇</p>
               <div className="suggestions">
@@ -154,7 +155,7 @@ export default function ChatPage() {
                 return (
                   <div key={i} className={`msg-row msg-${msg.role}`}>
                     {msg.role === "assistant" && (
-                      <div className="assistant-avatar">✦</div>
+                      <div className="assistant-avatar"><RailIcon size={15} /></div>
                     )}
                     <div className="msg-body">
                       <div className={[

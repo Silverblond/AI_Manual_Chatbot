@@ -33,11 +33,13 @@ export async function postChatStream(
   history: ChatMessage[],
   onToken: (text: string) => void,
   onDone: (sources: Source[]) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, history }),
+    signal,
   });
   if (!res.ok) throw new Error("chat stream failed");
 

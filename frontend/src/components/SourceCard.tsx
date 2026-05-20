@@ -5,6 +5,16 @@ interface Props {
   sources: Source[];
 }
 
+function groupByDoc(sources: Source[]): { docName: string; pages: number[] }[] {
+  const map = new Map<string, number[]>();
+  for (const src of sources) {
+    const pages = map.get(src.documentName) ?? [];
+    if (!pages.includes(src.page)) pages.push(src.page);
+    map.set(src.documentName, pages);
+  }
+  return Array.from(map.entries()).map(([docName, pages]) => ({ docName, pages }));
+}
+
 export default function SourcesSection({ sources }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -17,10 +27,10 @@ export default function SourcesSection({ sources }: Props) {
       </button>
       {open && (
         <div style={styles.list}>
-          {sources.map((src, i) => (
+          {groupByDoc(sources).map(({ docName, pages }, i) => (
             <div key={i} style={styles.card}>
-              <span style={styles.docName}>{src.documentName}</span>
-              <span style={styles.page}> · {src.page}p</span>
+              <span style={styles.docName}>{docName}</span>
+              <span style={styles.page}> · {pages.join(", ")}p</span>
             </div>
           ))}
         </div>

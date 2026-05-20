@@ -4,16 +4,21 @@ import { postChatStream } from "../api/client";
 import SourceCard from "../components/SourceCard";
 import type { ChatMessage, Source } from "../types/chat";
 
+const COLD_START_DELAY = 8000;  // 8초 이상이면 콜드스타트 안내
+const REQUEST_TIMEOUT = 60000; // 60초 타임아웃
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  isError?: boolean;
 }
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [coldStart, setColdStart] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,15 +38,25 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    setColdStart(false);
 
     // 빈 assistant 메시지 미리 추가 (스트리밍으로 채움)
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+    // 콜드스타트 감지 타이머
+    const coldStartTimer = setTimeout(() => setColdStart(true), COLD_START_DELAY);
+
+    // 타임아웃 처리
+    const abortController = new AbortController();
+    const timeoutTimer = setTimeout(() => abortController.abort(), REQUEST_TIMEOUT);
 
     try {
       await postChatStream(
         text,
         history,
         (token) => {
+          // 첫 토큰 수신 시 콜드스타트 안내 해제
+          setColdStart(false);
           setMessages((prev) => {
             const next = [...prev];
             next[next.length - 1] = {
@@ -58,17 +73,25 @@ export default function ChatPage() {
             return next;
           });
         },
+        abortController.signal,
       );
-    } catch {
+    } catch (e) {
+      const isTimeout = e instanceof Error && e.name === "AbortError";
       setMessages((prev) => {
         const next = [...prev];
         next[next.length - 1] = {
           ...next[next.length - 1],
-          content: "오류가 발생했습니다. 다시 시도해주세요.",
+          content: isTimeout
+            ? "응답 시간이 초과됐습니다. 다시 시도해주세요."
+            : "오류가 발생했습니다. 다시 시도해주세요.",
+          isError: true,
         };
         return next;
       });
     } finally {
+      clearTimeout(coldStartTimer);
+      clearTimeout(timeoutTimer);
+      setColdStart(false);
       setLoading(false);
     }
   }
@@ -101,13 +124,23 @@ export default function ChatPage() {
               <div
                 style={{
                   ...styles.bubble,
-                  backgroundColor: msg.role === "user" ? "#2563eb" : "#f1f5f9",
-                  color: msg.role === "user" ? "#fff" : isEmpty ? "#94a3b8" : "#1e293b",
+                  backgroundColor: msg.isError
+                    ? "#fef2f2"
+                    : msg.role === "user"
+                    ? "#2563eb"
+                    : "#f1f5f9",
+                  color: msg.isError
+                    ? "#dc2626"
+                    : msg.role === "user"
+                    ? "#fff"
+                    : isEmpty
+                    ? "#94a3b8"
+                    : "#1e293b",
                 }}
               >
                 {isEmpty ? (
                   "..."
-                ) : msg.role === "assistant" ? (
+                ) : msg.role === "assistant" && !msg.isError ? (
                   <ReactMarkdown components={markdownComponents}>
                     {msg.content}
                   </ReactMarkdown>
@@ -125,6 +158,11 @@ export default function ChatPage() {
             </div>
           );
         })}
+        {coldStart && (
+          <p style={styles.coldStartNotice}>
+            ⏳ 서버가 잠들어 있어서 첫 응답이 느릴 수 있어요. 잠시만 기다려주세요…
+          </p>
+        )}
         <div ref={bottomRef} />
       </main>
 
@@ -138,14 +176,13 @@ export default function ChatPage() {
           disabled={loading}
         />
         <button style={styles.button} onClick={send} disabled={loading}>
-          전송
+          {loading ? "…" : "전송"}
         </button>
       </footer>
     </div>
   );
 }
 
-// react-markdown 커스텀 컴포넌트 (인라인 스타일)
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
     <p style={{ margin: "0 0 8px 0", lineHeight: 1.6 }}>{children}</p>
@@ -199,6 +236,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#94a3b8",
     textAlign: "center",
     marginTop: "40px",
+  },
+  coldStartNotice: {
+    color: "#64748b",
+    fontSize: "13px",
+    textAlign: "center",
+    margin: "4px 0",
   },
   bubble: {
     padding: "10px 14px",

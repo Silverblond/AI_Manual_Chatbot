@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { postChat } from "../api/client";
+import { postChatStream } from "../api/client";
 import SourceCard from "../components/SourceCard";
 import type { ChatMessage, Source } from "../types/chat";
 
@@ -33,17 +33,40 @@ export default function ChatPage() {
     setInput("");
     setLoading(true);
 
+    // 빈 assistant 메시지 미리 추가 (스트리밍으로 채움)
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
     try {
-      const res = await postChat(text, history);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: res.answer, sources: res.sources as Source[] },
-      ]);
+      await postChatStream(
+        text,
+        history,
+        (token) => {
+          setMessages((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = {
+              ...next[next.length - 1],
+              content: next[next.length - 1].content + token,
+            };
+            return next;
+          });
+        },
+        (sources) => {
+          setMessages((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = { ...next[next.length - 1], sources };
+            return next;
+          });
+        },
+      );
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "오류가 발생했습니다. 다시 시도해주세요." },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = {
+          ...next[next.length - 1],
+          content: "오류가 발생했습니다. 다시 시도해주세요.",
+        };
+        return next;
+      });
     } finally {
       setLoading(false);
     }
@@ -66,31 +89,30 @@ export default function ChatPage() {
         {messages.length === 0 && (
           <p style={styles.placeholder}>안전 작업에 관해 궁금한 점을 물어보세요.</p>
         )}
-        {messages.map((msg, i) => (
-          <div key={i} style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "70%" }}>
-            <div
-              style={{
-                ...styles.bubble,
-                backgroundColor: msg.role === "user" ? "#2563eb" : "#f1f5f9",
-                color: msg.role === "user" ? "#fff" : "#1e293b",
-              }}
-            >
-              {msg.content}
-            </div>
-            {msg.sources && msg.sources.length > 0 && (
-              <div style={styles.sourceList}>
-                {msg.sources.map((src, j) => (
-                  <SourceCard key={j} source={src} />
-                ))}
+        {messages.map((msg, i) => {
+          const isStreaming = loading && i === messages.length - 1 && msg.role === "assistant";
+          const displayContent = isStreaming && msg.content === "" ? "..." : msg.content;
+          return (
+            <div key={i} style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "70%" }}>
+              <div
+                style={{
+                  ...styles.bubble,
+                  backgroundColor: msg.role === "user" ? "#2563eb" : "#f1f5f9",
+                  color: msg.role === "user" ? "#fff" : isStreaming && msg.content === "" ? "#94a3b8" : "#1e293b",
+                }}
+              >
+                {displayContent}
               </div>
-            )}
-          </div>
-        ))}
-        {loading && (
-          <div style={{ ...styles.bubble, alignSelf: "flex-start", backgroundColor: "#f1f5f9", color: "#94a3b8" }}>
-            ...
-          </div>
-        )}
+              {msg.sources && msg.sources.length > 0 && (
+                <div style={styles.sourceList}>
+                  {msg.sources.map((src, j) => (
+                    <SourceCard key={j} source={src} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </main>
 

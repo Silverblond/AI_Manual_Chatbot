@@ -39,6 +39,33 @@ def _build_history(history: list[dict]) -> list[types.Content]:
     return contents
 
 
+def generate_stream(query: str, chunks: list[dict], history: list[dict]):
+    """Gemini 스트리밍으로 텍스트 청크를 순차 yield한다."""
+    if not chunks:
+        yield OUT_OF_SCOPE
+        return
+
+    client = _client()
+    context = _build_context(chunks)
+    user_message = f"[참고 문서]\n{context}\n\n[질문]\n{query}"
+
+    contents = _build_history(history) + [
+        types.Content(role="user", parts=[types.Part(text=user_message)])
+    ]
+
+    for chunk in client.models.generate_content_stream(
+        model=GENERATION_MODEL,
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+        ),
+    ):
+        if chunk.text:
+            yield chunk.text
+
+
 def generate(query: str, chunks: list[dict], history: list[dict]) -> str:
     """검색된 청크를 컨텍스트로 Gemini 답변을 생성한다.
 

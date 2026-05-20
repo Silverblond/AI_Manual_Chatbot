@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { postChat } from "../api/client";
-import type { ChatMessage } from "../api/client";
+import SourceCard from "../components/SourceCard";
+import type { ChatMessage, Source } from "../types/chat";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  sources?: Source[];
 }
 
 export default function ChatPage() {
@@ -35,7 +37,7 @@ export default function ChatPage() {
       const res = await postChat(text, history);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: res.answer },
+        { role: "assistant", content: res.answer, sources: res.sources as Source[] },
       ]);
     } catch {
       setMessages((prev) => [
@@ -65,16 +67,23 @@ export default function ChatPage() {
           <p style={styles.placeholder}>안전 작업에 관해 궁금한 점을 물어보세요.</p>
         )}
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.bubble,
-              alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-              backgroundColor: msg.role === "user" ? "#2563eb" : "#f1f5f9",
-              color: msg.role === "user" ? "#fff" : "#1e293b",
-            }}
-          >
-            {msg.content}
+          <div key={i} style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "70%" }}>
+            <div
+              style={{
+                ...styles.bubble,
+                backgroundColor: msg.role === "user" ? "#2563eb" : "#f1f5f9",
+                color: msg.role === "user" ? "#fff" : "#1e293b",
+              }}
+            >
+              {msg.content}
+            </div>
+            {msg.sources && msg.sources.length > 0 && (
+              <div style={styles.sourceList}>
+                {msg.sources.map((src, j) => (
+                  <SourceCard key={j} source={src} />
+                ))}
+              </div>
+            )}
           </div>
         ))}
         {loading && (
@@ -134,13 +143,18 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: "40px",
   },
   bubble: {
-    maxWidth: "70%",
     padding: "10px 14px",
     borderRadius: "12px",
     lineHeight: 1.5,
     fontSize: "14px",
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+  },
+  sourceList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    marginTop: "8px",
   },
   inputRow: {
     display: "flex",

@@ -12,6 +12,7 @@ Supabase는 자체 마이그레이션 CLI 대신 **SQL Editor에서 1회 실행*
 |------|------|------|
 | 1 | `001_init_chunks.sql` | pgvector 확장 + chunks 테이블 + HNSW 인덱스 |
 | 2 | `002_update_embedding_dim.sql` | 임베딩 차원 768 → 3072 (gemini-embedding-001 기준) |
+| 3 | `003_chunks_unique_constraint.sql` | upsert 중복 방지 unique constraint 추가 |
 
 ## 확인
 

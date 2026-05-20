@@ -3,7 +3,7 @@ import os
 from google import genai
 from google.genai import types
 
-GENERATION_MODEL = "gemini-2.0-flash"
+GENERATION_MODEL = "gemini-2.5-flash"
 
 OUT_OF_SCOPE = "해당 질문은 안전매뉴얼 범위를 벗어납니다. 산업 안전 작업에 관한 질문을 해주세요."
 
@@ -67,6 +67,7 @@ def generate(query: str, chunks: list[dict], history: list[dict]) -> str:
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
     )
 

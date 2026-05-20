@@ -22,15 +22,15 @@ export default function SourcesSection({ sources }: Props) {
 
   return (
     <div style={{ marginTop: "6px" }}>
-      <button onClick={() => setOpen((v) => !v)} style={styles.toggle}>
+      <button className="source-toggle" onClick={() => setOpen((v) => !v)}>
         {open ? "출처 닫기 ▲" : `출처 보기 (${sources.length}) ▼`}
       </button>
       {open && (
-        <div style={styles.list}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
           {groupByDoc(sources).map(({ docName, pages }, i) => (
-            <div key={i} style={styles.card}>
-              <span style={styles.docName}>{docName}</span>
-              <span style={styles.page}> · {pages.join(", ")}p</span>
+            <div key={i} className="source-card">
+              <span className="source-doc">{docName}</span>
+              <span className="source-page"> · {pages.join(", ")}p</span>
             </div>
           ))}
         </div>
@@ -38,34 +38,3 @@ export default function SourcesSection({ sources }: Props) {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  toggle: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#64748b",
-    fontSize: "12px",
-    padding: "2px 0",
-    textDecoration: "underline",
-  },
-  list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    marginTop: "4px",
-  },
-  card: {
-    backgroundColor: "#f1f5f9",
-    borderRadius: "6px",
-    padding: "5px 10px",
-    fontSize: "12px",
-  },
-  docName: {
-    fontWeight: 600,
-    color: "#334155",
-  },
-  page: {
-    color: "#64748b",
-  },
-};

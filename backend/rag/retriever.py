@@ -6,7 +6,7 @@ from supabase import create_client, Client
 
 from ingest.embedder import embed_texts
 
-MATCH_COUNT = 5
+MATCH_COUNT = 10
 MIN_SIMILARITY = 0.4  # 이 점수 미만은 관련 없는 질문으로 판단
 
 _REWRITE_PROMPT = """당신은 철도 안전 문서 검색 전문가입니다.

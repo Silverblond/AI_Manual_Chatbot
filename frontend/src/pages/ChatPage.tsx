@@ -8,11 +8,14 @@ import type { ChatMessage, Source } from "../types/chat";
 const COLD_START_DELAY = 8000;
 const REQUEST_TIMEOUT = 60000;
 
+const BRIEFING_PREFIX = "다음 작업 조건에 맞는 작업 전 안전 브리핑 문서를 작성해줘. 조건: ";
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
   followUps?: string[];
+  isBriefing?: boolean;
   isError?: boolean;
 }
 
@@ -28,6 +31,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [coldStart, setColdStart] = useState(false);
+  const [briefingMode, setBriefingMode] = useState(false);
   const [dark, setDark] = useState(() =>
     window.matchMedia("(prefers-color-scheme: dark)").matches
   );
@@ -38,15 +42,19 @@ export default function ChatPage() {
   }, [messages]);
 
   const send = useCallback(async (text?: string) => {
-    const content = (text ?? input).trim();
-    if (!content || loading) return;
+    const raw = (text ?? input).trim();
+    if (!raw || loading) return;
+
+    const isBriefing = briefingMode && !text; // 칩 클릭은 일반 모드로
+    const content = isBriefing ? BRIEFING_PREFIX + raw : raw;
+    const displayContent = raw; // 화면에는 사용자가 입력한 원문만 표시
 
     const history: ChatMessage[] = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    setMessages((prev) => [...prev, { role: "user", content }]);
+    setMessages((prev) => [...prev, { role: "user", content: displayContent, isBriefing }]);
     setInput("");
     setLoading(true);
     setColdStart(false);
@@ -99,7 +107,7 @@ export default function ChatPage() {
       setColdStart(false);
       setLoading(false);
     }
-  }, [input, loading, messages]);
+  }, [input, loading, messages, briefingMode]);
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -167,6 +175,9 @@ export default function ChatPage() {
                       <div className="assistant-avatar"><RailIcon size={15} /></div>
                     )}
                     <div className="msg-body">
+                      {msg.role === "user" && msg.isBriefing && (
+                        <span className="briefing-badge">📋 브리핑</span>
+                      )}
                       <div className={[
                         "bubble",
                         `bubble-${msg.role}`,
@@ -209,13 +220,31 @@ export default function ChatPage() {
 
         {/* Footer */}
         <footer className={`chat-footer${isEmpty ? " chat-footer-centered" : ""}`}>
+          {briefingMode && (
+            <p className="briefing-hint">작업 유형, 인원, 장소(선택)를 입력하세요</p>
+          )}
           <div className="input-pill">
+            <button
+              className={`briefing-toggle${briefingMode ? " briefing-toggle-on" : ""}`}
+              onClick={() => setBriefingMode((b) => !b)}
+              aria-label="브리핑 모드 전환"
+              title={briefingMode ? "브리핑 모드 ON" : "브리핑 모드 OFF"}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              <span>브리핑</span>
+            </button>
             <input
               className="pill-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="철도 안전에 대해 질문하세요"
+              placeholder={briefingMode ? "예) 야간 선로 작업 · 5명 · 성수역 인근" : "철도 안전에 대해 질문하세요"}
               disabled={loading}
             />
             <button

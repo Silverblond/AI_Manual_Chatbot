@@ -256,12 +256,6 @@ body {
   color: #fff;
   opacity: 0.9;
 }
-.briefing-hint {
-  font-size: 12px;
-  color: var(--logo-color);
-  margin: 0 0 6px 4px;
-  opacity: 0.85;
-}
 .briefing-badge {
   display: inline-block;
   font-size: 11px;

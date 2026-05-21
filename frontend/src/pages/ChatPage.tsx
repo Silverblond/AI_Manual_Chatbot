@@ -220,9 +220,6 @@ export default function ChatPage() {
 
         {/* Footer */}
         <footer className={`chat-footer${isEmpty ? " chat-footer-centered" : ""}`}>
-          {briefingMode && (
-            <p className="briefing-hint">작업 유형, 인원, 장소(선택)를 입력하세요</p>
-          )}
           <div className="input-pill">
             <button
               className={`briefing-toggle${briefingMode ? " briefing-toggle-on" : ""}`}

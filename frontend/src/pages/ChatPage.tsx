@@ -12,6 +12,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  followUps?: string[];
   isError?: boolean;
 }
 
@@ -70,10 +71,10 @@ export default function ChatPage() {
             return next;
           });
         },
-        (sources) => {
+        (sources, followUps) => {
           setMessages((prev) => {
             const next = [...prev];
-            next[next.length - 1] = { ...next[next.length - 1], sources };
+            next[next.length - 1] = { ...next[next.length - 1], sources, followUps };
             return next;
           });
         },
@@ -183,6 +184,15 @@ export default function ChatPage() {
                         )}
                       </div>
                       {msg.sources && <SourcesSection sources={msg.sources} />}
+                      {msg.followUps && msg.followUps.length > 0 && (
+                        <div className="follow-ups">
+                          {msg.followUps.map((q) => (
+                            <button key={q} className="follow-up-chip" onClick={() => send(q)}>
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

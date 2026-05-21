@@ -32,7 +32,7 @@ export async function postChatStream(
   message: string,
   history: ChatMessage[],
   onToken: (text: string) => void,
-  onDone: (sources: Source[]) => void,
+  onDone: (sources: Source[], followUps: string[]) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/chat/stream`, {
@@ -59,7 +59,7 @@ export async function postChatStream(
       if (!line.startsWith("data: ")) continue;
       const data = JSON.parse(line.slice(6));
       if (data.type === "token") onToken(data.text);
-      else if (data.type === "done") onDone(data.sources);
+      else if (data.type === "done") onDone(data.sources, data.followUps ?? []);
     }
   }
 }

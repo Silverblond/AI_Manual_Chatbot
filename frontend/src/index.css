@@ -225,6 +225,28 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* ── Follow-up question chips ── */
+.follow-ups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.follow-up-chip {
+  background: var(--surface);
+  border: 1px solid var(--chip-border);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--logo-color);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.follow-up-chip:hover {
+  background: var(--chip-hover);
+  border-color: var(--logo-color);
+}
+
 @media (max-width: 500px) {
   .suggestions { grid-template-columns: 1fr; }
   .welcome-title { font-size: 24px; }

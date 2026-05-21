@@ -28,11 +28,18 @@ export async function postChat(
   return res.json();
 }
 
+export interface NewsArticle {
+  title: string;
+  description: string;
+  link: string;
+  pubDate: string;
+}
+
 export async function postChatStream(
   message: string,
   history: ChatMessage[],
   onToken: (text: string) => void,
-  onDone: (sources: Source[], followUps: string[]) => void,
+  onDone: (sources: Source[], followUps: string[], newsArticles: NewsArticle[]) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/chat/stream`, {
@@ -59,7 +66,7 @@ export async function postChatStream(
       if (!line.startsWith("data: ")) continue;
       const data = JSON.parse(line.slice(6));
       if (data.type === "token") onToken(data.text);
-      else if (data.type === "done") onDone(data.sources, data.followUps ?? []);
+      else if (data.type === "done") onDone(data.sources, data.followUps ?? [], data.newsArticles ?? []);
     }
   }
 }

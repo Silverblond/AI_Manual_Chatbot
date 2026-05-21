@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { postChatStream } from "../api/client";
+import type { NewsArticle } from "../api/client";
 import SourcesSection from "../components/SourceCard";
+import NewsSection from "../components/NewsSection";
 import RailIcon from "../components/RailIcon";
 import type { ChatMessage, Source } from "../types/chat";
 
@@ -15,6 +17,7 @@ interface Message {
   content: string;
   sources?: Source[];
   followUps?: string[];
+  newsArticles?: NewsArticle[];
   isBriefing?: boolean;
   isError?: boolean;
 }
@@ -79,10 +82,10 @@ export default function ChatPage() {
             return next;
           });
         },
-        (sources, followUps) => {
+        (sources, followUps, newsArticles) => {
           setMessages((prev) => {
             const next = [...prev];
-            next[next.length - 1] = { ...next[next.length - 1], sources, followUps };
+            next[next.length - 1] = { ...next[next.length - 1], sources, followUps, newsArticles };
             return next;
           });
         },
@@ -191,6 +194,7 @@ export default function ChatPage() {
                         )}
                       </div>
                       {msg.sources && <SourcesSection sources={msg.sources} />}
+                      {msg.newsArticles && <NewsSection articles={msg.newsArticles} />}
                       {msg.followUps && msg.followUps.length > 0 && (
                         <div className="follow-ups">
                           {msg.followUps.map((q) => (

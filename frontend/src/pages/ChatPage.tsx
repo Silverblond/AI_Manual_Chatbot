@@ -123,18 +123,14 @@ export default function ChatPage() {
       <div className="chat-app">
         {/* Header */}
         <header className="chat-header">
-          <div className="chat-header-left">
+          <div
+            className={`chat-header-left${!isEmpty ? " chat-header-left-clickable" : ""}`}
+            onClick={() => { if (!isEmpty) { setMessages([]); setInput(""); } }}
+            aria-label={!isEmpty ? "대화 초기화" : undefined}
+          >
             <span className="chat-logo-icon"><RailIcon size={22} /></span>
             <span className="chat-logo-text">철도 안전 AI</span>
           </div>
-          {!isEmpty && (
-            <button className="reset-btn" onClick={() => { setMessages([]); setInput(""); }} aria-label="대화 초기화">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
-              </svg>
-              <span>초기화</span>
-            </button>
-          )}
           <button className="theme-btn" onClick={() => setDark((d) => !d)} aria-label="테마 전환">
             {dark ? (
               <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
@@ -241,7 +237,7 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={briefingMode ? "예) 야간 선로 작업 · 5명 · 성수역 인근" : "철도 안전에 대해 질문하세요"}
+              placeholder={briefingMode ? "예) 야간 선로 작업 · 5명" : "철도 안전에 대해 질문하세요"}
               disabled={loading}
             />
             <button

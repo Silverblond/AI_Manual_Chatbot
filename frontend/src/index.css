@@ -107,23 +107,13 @@ body {
   letter-spacing: -0.2px;
 }
 
-.reset-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 12px;
-  height: 36px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 13px;
+.chat-header-left-clickable {
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  border-radius: 8px;
+  transition: opacity 0.15s;
 }
-.reset-btn:hover {
-  background: var(--surface-alt);
-  color: var(--text);
+.chat-header-left-clickable:hover {
+  opacity: 0.7;
 }
 
 .theme-btn {

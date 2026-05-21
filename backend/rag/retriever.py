@@ -58,6 +58,11 @@ def _client() -> Client:
     )
 
 
+def rewrite_query(query: str) -> str:
+    """외부에서 rewritten query를 재사용할 수 있도록 공개."""
+    return _rewrite_query(query)
+
+
 def retrieve(query: str) -> list[dict]:
     """질문을 임베딩해 유사도 상위 청크를 반환한다.
 
@@ -66,6 +71,11 @@ def retrieve(query: str) -> list[dict]:
         유사도 MIN_SIMILARITY 미만이면 빈 리스트 반환
     """
     rewritten = _rewrite_query(query)
+    return retrieve_with_rewritten(rewritten)
+
+
+def retrieve_with_rewritten(rewritten: str) -> list[dict]:
+    """이미 rewrite된 쿼리로 검색한다."""
     embedding = embed_texts([rewritten])[0]
     client = _client()
 

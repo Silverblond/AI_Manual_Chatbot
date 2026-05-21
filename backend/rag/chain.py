@@ -1,11 +1,13 @@
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from google import genai
 from google.genai import types
 
 from rag.generator import generate, generate_stream
-from rag.retriever import retrieve
+from rag.news_fetcher import fetch_news
+from rag.retriever import retrieve_with_rewritten, rewrite_query
 
 # 답변 내용이 없을 때 포함되는 문구 — 출처를 숨기는 기준
 _NO_ANSWER_PHRASES = (
@@ -48,7 +50,6 @@ def _generate_follow_ups(query: str, chunks: list[dict]) -> list[str]:
             ),
         )
         text = response.text.strip()
-        # JSON 배열 파싱
         start = text.find("[")
         end = text.rfind("]") + 1
         if start == -1 or end == 0:
@@ -64,8 +65,14 @@ def run(query: str, history: list[dict]) -> dict:
     Returns:
         {answer: str, sources: list[{documentName, page, preview}]}
     """
-    chunks = retrieve(query)
-    answer = generate(query, chunks, history)
+    rewritten = rewrite_query(query)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_chunks = executor.submit(retrieve_with_rewritten, rewritten)
+        future_news = executor.submit(fetch_news, rewritten)
+        chunks = future_chunks.result()
+        news = future_news.result()
+
+    answer = generate(query, chunks, history, news)
 
     sources = [
         {
@@ -76,7 +83,7 @@ def run(query: str, history: list[dict]) -> dict:
         for c in chunks
     ]
 
-    return {"answer": answer, "sources": sources}
+    return {"answer": answer, "sources": sources, "newsArticles": news}
 
 
 def stream(query: str, history: list[dict]):
@@ -85,7 +92,14 @@ def stream(query: str, history: list[dict]):
     Yields:
         SSE 포맷 문자열: data: {"type": "token"|"done", ...}
     """
-    chunks = retrieve(query)
+    # rewrite 한 번으로 매뉴얼 검색 + 뉴스 검색 병렬 실행
+    rewritten = rewrite_query(query)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_chunks = executor.submit(retrieve_with_rewritten, rewritten)
+        future_news = executor.submit(fetch_news, rewritten)
+        chunks = future_chunks.result()
+        news = future_news.result()
+
     sources = [
         {
             "documentName": c["document_name"],
@@ -96,12 +110,13 @@ def stream(query: str, history: list[dict]):
     ]
 
     full_text = ""
-    for text in generate_stream(query, chunks, history):
+    for text in generate_stream(query, chunks, history, news):
         full_text += text
         yield f"data: {json.dumps({'type': 'token', 'text': text}, ensure_ascii=False)}\n\n"
 
-    # 답변 내용이 없는 경우 출처·연관 질문을 함께 노출하지 않는다
+    # 답변 내용이 없는 경우 출처·연관 질문·뉴스를 함께 노출하지 않는다
     has_answer = not any(phrase in full_text for phrase in _NO_ANSWER_PHRASES)
     follow_ups = _generate_follow_ups(query, chunks) if has_answer else []
+    news_articles = news if has_answer else []
 
-    yield f"data: {json.dumps({'type': 'done', 'sources': sources if has_answer else [], 'followUps': follow_ups}, ensure_ascii=False)}\n\n"
+    yield f"data: {json.dumps({'type': 'done', 'sources': sources if has_answer else [], 'followUps': follow_ups, 'newsArticles': news_articles}, ensure_ascii=False)}\n\n"
